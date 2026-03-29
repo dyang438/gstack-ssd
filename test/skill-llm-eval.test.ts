@@ -369,7 +369,7 @@ ${section}`);
     const diffAwareSection = qaContent.slice(diffAwareStart, diffAwareEnd);
     const rulesSection = qaContent.slice(rulesStart, rulesEnd);
 
-    const result = await callJudge<{ would_browse: boolean; fallback_behavior: string; confidence: number; reasoning: string }>(`You are evaluating whether a QA testing skill document would cause an AI agent to USE THE BROWSER or REFUSE to use the browser in a specific scenario.
+    const { result } = await callJudge<{ would_browse: boolean; fallback_behavior: string; confidence: number; reasoning: string }>(`You are evaluating whether a QA testing skill document would cause an AI agent to USE THE BROWSER or REFUSE to use the browser in a specific scenario.
 
 SCENARIO:
 A user runs /qa (a browser-based QA testing skill). The branch diff shows ONLY prompt template files and config file changes — no routes, views, controllers, components, or CSS were changed. The changes are "purely backend" with no obvious UI surface.
@@ -568,7 +568,7 @@ async function runWorkflowJudge(opts: {
     section = content.slice(startIdx);
   }
 
-  const scores = await callJudge<JudgeScore>(`You are evaluating the quality of ${opts.judgeContext} for an AI coding agent.
+  const { result: scores } = await callJudge<JudgeScore>(`You are evaluating the quality of ${opts.judgeContext} for an AI coding agent.
 
 The agent reads this document to learn ${opts.judgeGoal}. It references external tools and files
 that are documented separately — do NOT penalize for missing external definitions.
@@ -806,7 +806,7 @@ describeIfSelected('Voice directive eval', ['voice directive tone'], () => {
     const voiceEnd = content.indexOf('\n## ', voiceStart + 1);
     const voiceSection = content.slice(voiceStart, voiceEnd > 0 ? voiceEnd : voiceStart + 3000);
 
-    const result = await callJudge<{
+    const { result } = await callJudge<{
       directness: number;
       concreteness: number;
       avoids_corporate: number;
