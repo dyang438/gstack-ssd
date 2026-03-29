@@ -76,11 +76,13 @@ const OPENAI_LITMUS_CHECKS = [
 
 // ─── Codex Helpers ───────────────────────────────────────────
 
-function codexSkillName(skillDir: string): string {
-  if (skillDir === '.' || skillDir === '') return 'gstack';
+function codexSkillName(skillDir: string, frontmatterName?: string): string {
+  // Use frontmatter name: if it differs from directory name (e.g., run-tests/ with name: test)
+  const baseName = frontmatterName && frontmatterName !== skillDir ? frontmatterName : skillDir;
+  if (baseName === '.' || baseName === '') return 'gstack';
   // Don't double-prefix: gstack-upgrade → gstack-upgrade (not gstack-gstack-upgrade)
-  if (skillDir.startsWith('gstack-')) return skillDir;
-  return `gstack-${skillDir}`;
+  if (baseName.startsWith('gstack-')) return baseName;
+  return `gstack-${baseName}`;
 }
 
 function extractNameAndDescription(content: string): { name: string; description: string } {
@@ -217,12 +219,18 @@ function processTemplate(tmplPath: string, host: Host = 'claude'): { outputPath:
   // Determine skill directory relative to ROOT
   const skillDir = path.relative(ROOT, path.dirname(tmplPath));
 
+  // Extract skill name from frontmatter early — needed for both TemplateContext and Codex output paths.
+  // When frontmatter name: differs from directory name (e.g., run-tests/ with name: test),
+  // the frontmatter name is used for Codex skill naming and setup script symlinks.
+  const { name: extractedName, description: extractedDescription } = extractNameAndDescription(tmplContent);
+  const skillName = extractedName || path.basename(path.dirname(tmplPath));
+
   let outputDir: string | null = null;
 
   // For codex host, route output to .agents/skills/{codexSkillName}/SKILL.md
   let symlinkLoop = false;
   if (host === 'codex') {
-    const codexName = codexSkillName(skillDir === '.' ? '' : skillDir);
+    const codexName = codexSkillName(skillDir === '.' ? '' : skillDir, extractedName || undefined);
     outputDir = path.join(ROOT, '.agents', 'skills', codexName);
     fs.mkdirSync(outputDir, { recursive: true });
     outputPath = path.join(outputDir, 'SKILL.md');
@@ -242,10 +250,6 @@ function processTemplate(tmplPath: string, host: Host = 'claude'): { outputPath:
       // realpathSync fails if file doesn't exist yet — that's fine, no symlink loop
     }
   }
-
-  // Extract skill name from frontmatter for TemplateContext
-  const { name: extractedName, description: extractedDescription } = extractNameAndDescription(tmplContent);
-  const skillName = extractedName || path.basename(path.dirname(tmplPath));
 
   // Extract benefits-from list from frontmatter (inline YAML: benefits-from: [a, b])
   const benefitsMatch = tmplContent.match(/^benefits-from:\s*\[([^\]]*)\]/m);
@@ -296,7 +300,7 @@ function processTemplate(tmplPath: string, host: Host = 'claude'): { outputPath:
     content = content.replace(/\.claude\/skills/g, '.agents/skills');
 
     if (outputDir && !symlinkLoop) {
-      const codexName = codexSkillName(skillDir === '.' ? '' : skillDir);
+      const codexName = codexSkillName(skillDir === '.' ? '' : skillDir, extractedName || undefined);
       const agentsDir = path.join(outputDir, 'agents');
       fs.mkdirSync(agentsDir, { recursive: true });
       const displayName = codexName;
