@@ -45,15 +45,17 @@ describe('Audit compliance', () => {
     expect(completionSection).toContain('_TEL" != "off"');
   });
 
-  // Fix 3: W012 — Bun install is version-pinned
-  test('bun install commands use version pinning', () => {
+  // Round 2 Fix 1: W012 — Bun install uses checksum verification
+  test('bun install uses checksum-verified method', () => {
     const browseResolver = readFileSync(join(ROOT, 'scripts/resolvers/browse.ts'), 'utf-8');
-    expect(browseResolver).toContain('BUN_VERSION');
-    // Should not have unpinned curl|bash (without BUN_VERSION on same line)
-    const lines = browseResolver.split('\n');
+    expect(browseResolver).toContain('shasum -a 256');
+    expect(browseResolver).toContain('BUN_INSTALL_SHA');
+    const setup = readFileSync(join(ROOT, 'setup'), 'utf-8');
+    // Setup error message should not have unverified curl|bash
+    const lines = setup.split('\n');
     for (const line of lines) {
-      if (line.includes('bun.sh/install') && line.includes('bash') && !line.includes('BUN_VERSION') && !line.includes('command -v')) {
-        throw new Error(`Unpinned bun install found: ${line.trim()}`);
+      if (line.includes('bun.sh/install') && line.includes('| bash') && !line.includes('shasum')) {
+        throw new Error(`Unverified bun install found: ${line.trim()}`);
       }
     }
   });
