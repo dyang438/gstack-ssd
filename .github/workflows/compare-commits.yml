@@ -1,0 +1,52 @@
+# Times the same pipeline at BASE vs TARGET refs (wall clock). Long-running if measure=test.
+# Run: Actions → Compare commits → Run workflow
+
+name: Compare commits
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "BASE ref (branch, tag, or full SHA)"
+        required: false
+        default: "HEAD~1"
+      target_ref:
+        description: "TARGET ref"
+        required: false
+        default: "HEAD"
+      measure:
+        description: "test = install + playwright + setup + test; build = install + build only"
+        required: false
+        default: "build"
+        type: choice
+        options:
+          - test
+          - build
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compare-commits-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    name: Compare two refs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository (full history for arbitrary SHAs)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Compare BASE vs TARGET
+        env:
+          COMPARE_COMMIT_BASE: ${{ inputs.base_ref }}
+          COMPARE_COMMIT_TARGET: ${{ inputs.target_ref }}
+          COMPARE_GSTACK_MEASURE: ${{ inputs.measure }}
+        run: bun run compare-commits

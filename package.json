@@ -33,7 +33,8 @@
     "eval:watch": "bun run scripts/eval-watch.ts",
     "eval:select": "bun run scripts/eval-select.ts",
     "analytics": "bun run scripts/analytics.ts",
-    "test:audit": "bun test test/audit-compliance.test.ts"
+    "test:audit": "bun test test/audit-compliance.test.ts",
+    "compare-commits": "bun run scripts/compare-commits.ts"
   },
   "dependencies": {
     "diff": "^7.0.0",
