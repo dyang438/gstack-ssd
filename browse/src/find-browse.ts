@@ -58,4 +58,7 @@ function main() {
   console.log(bin);
 }
 
-main();
+// Only run when executed as the CLI — not when imported for tests (locateBinary).
+if (import.meta.main) {
+  main();
+}
