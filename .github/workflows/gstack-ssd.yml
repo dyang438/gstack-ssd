@@ -1,0 +1,67 @@
+# Bun install → Playwright → ./setup --host codex → tests / build.
+# Run: Actions → gstack-ssd → Run workflow.
+
+name: gstack-ssd
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag, or full commit SHA to checkout"
+        required: false
+        default: "main"
+      run_target:
+        description: "What to run"
+        required: false
+        default: "test"
+        type: choice
+        options:
+          - test
+          - build
+          - both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gstack-ssd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Bun CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright Chromium (for setup)
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run gstack setup
+        run: chmod +x ./setup && ./setup --host codex
+
+      - name: Resolved commit
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          git log -1 --oneline
+          test -f .agents/skills/gstack/browse/dist/browse
+          echo "browse binary present (find-browse layout OK)"
+
+      - name: Unit tests (excludes e2e / LLM evals)
+        if: inputs.run_target == 'test' || inputs.run_target == 'both'
+        run: bun run test
+
+      - name: Build (skill docs + compiled CLIs)
+        if: inputs.run_target == 'build' || inputs.run_target == 'both'
+        run: bun run build
